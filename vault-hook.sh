@@ -131,13 +131,12 @@ unchanged_cert() {
     --header "X-Vault-Request: true" \
     --header "X-Vault-Token: ${VAULT_TOKEN}" \
     "${VAULT_ADDRESS}/v1/${VAULT_SECRET_BASE}/${DOMAIN}")
-  CURRENT_FILE_KEY_SHA=$(openssl rsa -modulus -noout -in ${KEYFILE} \
+  CURRENT_FILE_KEY_SHA=$(openssl pkey -pubout < ${KEYFILE} | sha256sum)
+  CURRENT_SECRET_KEY_SHA=$(jq .data.data.key --raw-output <<< "${CURRENT_SECRET}" \
+    | openssl pkey -pubout \
     | sha256sum)
-  CURRENT_SECRET_CERT_SHA=$(jq .data.data.cert --raw-output <<< "${CURRENT_SECRET}" \
-    | openssl x509 -modulus -noout -in - \
-    | sha256sum)
-  # check if the certificate match
-  if [[ "${CURRENT_SECRET_CERT_SHA% *}" == "${CURRENT_FILE_KEY_SHA% *}" ]]
+  # check if the keys match
+  if [[ "${CURRENT_SECRET_KEY_SHA% *}" == "${CURRENT_FILE_KEY_SHA% *}" ]]
   then
     echo " + The certificate is already up to date in ${VAULT_ADDRESS} at ${VAULT_SECRET_BASE}/${DOMAIN}"
   else
