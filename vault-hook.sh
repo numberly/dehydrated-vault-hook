@@ -33,7 +33,9 @@ upload_certificate() {
   #   The path of the file containing the intermediate certificate(s).
   # - TIMESTAMP
   #   Timestamp when the specified certificate was created.
-
+  
+  acquire_token
+  
   echo " + Storing certificates in ${VAULT_ADDRESS} at ${VAULT_SECRET_BASE}/${DOMAIN}"
 
   curl \
