@@ -6,9 +6,15 @@ source "/etc/dehydrated/vault.inc"
 VAULT_TOKEN=""
 
 acquire_token() {
-  VAULT_TOKEN=$(curl -s -X POST \
-    -d "{\"role_id\":\"${VAULT_ROLE_ID}\",\"secret_id\":\"${VAULT_SECRET_ID}\"}" \
-    "${VAULT_ADDRESS}/v1/auth/approle/login" | jq -r .auth.client_token)
+  OLD_VAULT_TOKEN=$(cat ~/.vault-token)
+
+  if [[ "$(curl -qs -H "X-Vault-Request: true" -H "X-Vault-Token: ${OLD_VAULT_TOKEN}" ${VAULT_ADDRESS}/v1/auth/token/lookup-self | jq --raw-output '. | has("errors")')" == "true" ]]
+  then
+    VAULT_TOKEN=$(curl -s -X POST  -d "{\"role_id\":\"${VAULT_ROLE_ID}\",\"secret_id\":\"${VAULT_SECRET_ID}\"}"  "${VAULT_ADDRESS}/v1/auth/approle/login" | jq -r .auth.client_token)
+    echo ${VAULT_TOKEN} > ~/.vault-token
+  else
+    VAULT_TOKEN=${OLD_VAULT_TOKEN}
+  fi
 }
 
 upload_certificate() {
@@ -33,6 +39,8 @@ upload_certificate() {
   #   The path of the file containing the intermediate certificate(s).
   # - TIMESTAMP
   #   Timestamp when the specified certificate was created.
+
+  acquire_token
 
   echo " + Storing certificates in ${VAULT_ADDRESS} at ${VAULT_SECRET_BASE}/${DOMAIN}"
 
